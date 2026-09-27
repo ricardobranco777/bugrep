@@ -1,0 +1,9 @@
+.git
+bugrep
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+dist/
+completions/
+coverage.out

@@ -1,0 +1,5 @@
+/bugrep
+/dist/
+/completions/
+*.test
+coverage.out

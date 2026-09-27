@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  MODULE: github.com/ricardobranco777/bugrep
+
+jobs:
+  binaries:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          out=bugrep
+          [ "$GOOS" = windows ] && out=bugrep.exe
+          go build -ldflags "-s -w -X ${MODULE}/internal/cli.Version=${{ github.ref_name }}" -o "$out" ./cmd/bugrep
+
+      - name: Archive
+        id: archive
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          name="bugrep_${{ github.ref_name }}_${GOOS}_${GOARCH}"
+          mkdir "$name"
+          if [ "$GOOS" = windows ]; then
+            cp bugrep.exe README.md "$name/"
+            zip -r "$name.zip" "$name"
+            echo "asset=$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            cp bugrep README.md "$name/"
+            tar czf "$name.tar.gz" "$name"
+            echo "asset=$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.archive.outputs.asset }}
+          path: ${{ steps.archive.outputs.asset }}
+          retention-days: 1
+
+  linux-packages:
+    name: Build .deb/.rpm (linux/amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build -ldflags "-s -w -X ${MODULE}/internal/cli.Version=${{ github.ref_name }}" -o bugrep ./cmd/bugrep
+
+      - name: Package
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # Strip the leading "v" for package versioning (v1.2.3 -> 1.2.3).
+          export VERSION="${VERSION#v}"
+          go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --config nfpm.yaml --target . --packager deb
+          go run github.com/goreleaser/nfpm/v2/cmd/nfpm@latest package --config nfpm.yaml --target . --packager rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            *.deb
+            *.rpm
+          retention-days: 1
+
+  release:
+    name: Publish release
+    needs: [binaries, linux-packages]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum ./* > checksums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: dist/*
+          generate_release_notes: true
+          draft: true
