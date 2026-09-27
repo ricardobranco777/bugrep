@@ -1,0 +1,21 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - unconvert
+    - gocritic
+  settings:
+    errcheck:
+      # Printing to stdout/a tabwriter can fail (e.g. a broken pipe), but
+      # bugrep's CLI output helpers don't have a useful way to react to
+      # that, and checking every call site would just add noise.
+      exclude-functions:
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - (*text/tabwriter.Writer).Write
