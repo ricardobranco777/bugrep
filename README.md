@@ -22,7 +22,7 @@ make install        # into $(go env GOPATH)/bin
 Or run the container image (published on every `master` push as `:master`, and on every release as `:vX.Y.Z` and `:latest`):
 
 ```sh
-docker run --rm -v ~/.config/bugrep:/home/nonroot/.config/bugrep:ro \
+docker run --rm -v ~/.config/bugrep:/config/bugrep:ro \
   ghcr.io/ricardobranco777/bugrep:latest search "kernel panic" -s open
 ```
 
