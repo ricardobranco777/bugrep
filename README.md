@@ -12,6 +12,13 @@ tracker at once by default, merging and sorting the results into one list.
 go install github.com/ricardobranco777/bugrep/cmd/bugrep@latest
 ```
 
+Or download the latest release binary (no version needed; also available for `darwin` and `arm64`, and as `bugrep_windows_<arch>.exe`):
+
+```sh
+curl -fLo bugrep https://github.com/ricardobranco777/bugrep/releases/latest/download/bugrep_linux_amd64
+chmod +x bugrep
+```
+
 Or build from a clone:
 
 ```sh
@@ -22,7 +29,7 @@ make install        # into $(go env GOPATH)/bin
 Or run the container image (published on every `master` push as `:master`, and on every release as `:vX.Y.Z` and `:latest`):
 
 ```sh
-docker run --rm -v ~/.config/bugrep:/home/nonroot/.config/bugrep:ro,Z \
+docker run --rm -v ~/.config/bugrep:/config/bugrep:ro,z \
   ghcr.io/ricardobranco777/bugrep:latest search "kernel panic" -s open
 ```
 
